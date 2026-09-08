@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scout Attendance Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
+
+  <!-- CONFIGURATION -->
+  <script>
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+    const firebaseConfig = {
+     apiKey: "AIzaSyC2BHI0O3HtH7ZjQyVpJ_3WepvJhG6x7hE",
+     authDomain: "troop1559-auth.firebaseapp.com",
+     projectId: "troop1559-auth",
+     storageBucket: "troop1559-auth.firebasestorage.app",
+     messagingSenderId: "971401171214",
+     appId: "1:971401171214:web:51504fe838ebd6bce1c75f",
+     measurementId: "G-M9FY16NDW3"
+    };
+
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz6dbc1PAfjc4P1C6kMfCSOgDtDRwE59tzLdIk6s_40mmCusgQmcGcq9C7jMTnGG2IETg/exec";
+  </script>
+
+  <div id="app" class="p-4 md:p-8 max-w-7xl mx-auto">
+    <!-- Loading Screen -->
+    <div id="loadingView" class="flex flex-col items-center justify-center min-h-[60vh]">
+      <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      <p class="mt-4 text-slate-400">Loading Attendance System...</p>
+    </div>
+
+    <!-- Login View -->
+    <div id="loginView" class="hidden flex flex-col items-center justify-center min-h-[70vh]">
+      <div class="bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-2xl max-w-md w-full text-center">
+        <h1 class="text-2xl font-bold mb-2">Scout Attendance</h1>
+        <p class="text-slate-400 mb-6 text-sm">Sign in to access your team's records</p>
+        
+        <button id="googleLoginBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 px-4 rounded-xl transition shadow-lg flex items-center justify-center gap-2">
+          <span>Sign In with Google</span>
+        </button>
+        <p id="loginError" class="text-red-400 text-sm mt-4 hidden"></p>
+      </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboardView" class="hidden space-y-6">
+      <!-- Header Bar -->
+      <header class="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <img id="userAvatar" class="w-10 h-10 rounded-full object-cover border-2 border-blue-500" src="" alt="Profile">
+          <div>
+            <h2 id="userName" class="font-bold text-slate-100">---</h2>
+            <span id="roleBadge" class="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-300">Viewer</span>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-3">
+          <button id="newEventBtn" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-4 py-2 rounded-xl transition">
+            + New Event
+          </button>
+          <button id="logoutBtn" class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm px-4 py-2 rounded-xl transition">
+            Sign Out
+          </button>
+        </div>
+      </header>
+
+      <!-- Attendance Table -->
+      <main class="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-xl">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr id="tableHeader" class="bg-slate-900/60 border-b border-slate-700 text-slate-300 text-sm">
+                <th class="p-4 sticky left-0 bg-slate-900 z-10 w-64">Member</th>
+                <!-- Events populated dynamically -->
+              </tr>
+            </thead>
+            <tbody id="tableBody" class="divide-y divide-slate-700/50 text-sm">
+              <!-- Rows populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- New Event Modal -->
+  <div id="eventModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-lg w-full p-6 space-y-4">
+      <h3 class="text-xl font-bold">Create New Event / Meeting</h3>
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 mb-1">EVENT TITLE</label>
+        <input id="eventNameInput" type="text" placeholder="e.g. Weekly Meeting 09/08" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500" />
+      </div>
+
+      <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
+        <label class="block text-xs font-semibold text-slate-400">MARK ATTENDANCE</label>
+        <div id="modalScoutList" class="space-y-2"></div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-2">
+        <button id="cancelModalBtn" class="px-4 py-2 rounded-xl text-slate-400 hover:text-white">Cancel</button>
+        <button id="saveEventBtn" class="bg-blue-600 hover:bg-blue-500 px-5 py-2 rounded-xl font-semibold">Save Event</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APPLICATION LOGIC -->
+  <script>
+    firebase.initializeApp(FIREBASE_CONFIG);
+    const auth = firebase.auth();
+
+    let state = {
+      currentUser: null,
+      events: [],
+      members: []
+    };
+
+    // UI View Controllers
+    function showView(viewId) {
+      ['loadingView', 'loginView', 'dashboardView'].forEach(id => {
+        document.getElementById(id).classList.toggle('hidden', id !== viewId);
+      });
+    }
+
+    // Auth Change Listener
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        showView('loadingView');
+        await loadSheetData(user.uid, user.photoURL);
+      } else {
+        showView('loginView');
+      }
+    });
+
+    // Login Action
+    document.getElementById('googleLoginBtn').onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch(err => {
+        const errEl = document.getElementById('loginError');
+        errEl.innerText = err.message;
+        errEl.classList.remove('hidden');
+      });
+    };
+
+    document.getElementById('logoutBtn').onclick = () => auth.signOut();
+
+    // Fetch Data from Apps Script
+    async function loadSheetData(userId, authPhotoUrl) {
+      try {
+        const res = await fetch(`${APPS_SCRIPT_URL}?action=getInitialData&userId=${encodeURIComponent(userId)}`);
+        const data = await res.json();
+
+        if (data.status === "denied") {
+          alert("Access Denied: Your user ID (" + userId + ") was not found in the Scouts authorization sheet.");
+          auth.signOut();
+          return;
+        }
+
+        state.currentUser = data.user;
+        state.events = data.events;
+        state.members = data.members;
+
+        // Fallback profile photo logic
+        if (!state.currentUser.photoUrl && authPhotoUrl) {
+          state.currentUser.photoUrl = authPhotoUrl;
+        }
+
+        renderDashboard();
+        showView('dashboardView');
+      } catch (e) {
+        alert("Failed to connect to Google Sheets server.");
+        console.error(e);
+      }
+    }
+
+    // Render Grid UI
+    function renderDashboard() {
+      // User Profile Header
+      document.getElementById('userName').innerText = state.currentUser.fullName || "User";
+      document.getElementById('userAvatar').src = state.currentUser.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(state.currentUser.fullName)}`;
+      
+      const roleBadge = document.getElementById('roleBadge');
+      const newEventBtn = document.getElementById('newEventBtn');
+
+      if (state.currentUser.isEditor) {
+        roleBadge.innerText = "Editor";
+        roleBadge.className = "text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-semibold border border-blue-500/30";
+        newEventBtn.classList.remove('hidden');
+      } else {
+        roleBadge.innerText = "Read Only";
+        roleBadge.className = "text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400";
+        newEventBtn.classList.add('hidden');
+      }
+
+      // Headers
+      const headerTr = document.getElementById('tableHeader');
+      headerTr.innerHTML = `<th class="p-4 sticky left-0 bg-slate-900 z-10 w-64 border-r border-slate-700">Member</th>`;
+      state.events.forEach(evt => {
+        headerTr.innerHTML += `<th class="p-4 text-center min-w-[120px] font-semibold border-r border-slate-700/50">${evt}</th>`;
+      });
+
+      // Rows
+      const body = document.getElementById('tableBody');
+      body.innerHTML = "";
+
+      state.members.forEach((member) => {
+        const avatar = member.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}`;
+        let rowHtml = `
+          <tr class="hover:bg-slate-700/30 transition">
+            <td class="p-3 sticky left-0 bg-slate-800 border-r border-slate-700 flex items-center gap-3 font-medium">
+              <img src="${avatar}" class="w-8 h-8 rounded-full object-cover bg-slate-700" alt="">
+              <span>${member.name}</span>
+            </td>
+        `;
+
+        member.records.forEach((status, colIndex) => {
+          const isPresent = String(status).toUpperCase() === 'Y';
+          const canEdit = state.currentUser.isEditor;
+
+          rowHtml += `
+            <td class="p-2 text-center border-r border-slate-700/50">
+              <button 
+                ${canEdit ? `onclick="toggleAttendance(${member.rowIndex}, ${colIndex}, '${status}')"` : 'disabled'}
+                class="px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                  isPresent 
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30' 
+                    : 'bg-rose-500/20 text-rose-400 border border-rose-500/40 hover:bg-rose-500/30'
+                } ${!canEdit ? 'cursor-default opacity-80' : ''}">
+                ${isPresent ? 'YES' : 'NO'}
+              </button>
+            </td>
+          `;
+        });
+
+        rowHtml += `</tr>`;
+        body.innerHTML += rowHtml;
+      });
+    }
+
+    // Single Cell Toggle
+    async function toggleAttendance(rowIndex, colIndex, currentValue) {
+      const newValue = currentValue === 'Y' ? 'N' : 'Y';
+      
+      // Optimistic Local Update
+      const member = state.members.find(m => m.rowIndex === rowIndex);
+      if (member) member.records[colIndex] = newValue;
+      renderDashboard();
+
+      await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'updateCell',
+          rowIndex: rowIndex,
+          colIndex: colIndex,
+          value: newValue
+        })
+      });
+    }
+
+    // Modal Control & Event Creation
+    const modal = document.getElementById('eventModal');
+    document.getElementById('newEventBtn').onclick = () => {
+      const list = document.getElementById('modalScoutList');
+      list.innerHTML = "";
+      state.members.forEach(m => {
+        list.innerHTML += `
+          <label class="flex items-center justify-between p-2.5 bg-slate-900 rounded-xl border border-slate-700 cursor-pointer">
+            <span class="text-sm font-medium">${m.name}</span>
+            <input type="checkbox" data-name="${m.name}" checked class="w-5 h-5 accent-blue-500 rounded">
+          </label>
+        `;
+      });
+      document.getElementById('eventNameInput').value = "";
+      modal.classList.remove('hidden');
+    };
+
+    document.getElementById('cancelModalBtn').onclick = () => modal.classList.add('hidden');
+
+    document.getElementById('saveEventBtn').onclick = async () => {
+      const eventName = document.getElementById('eventNameInput').value.trim();
+      if (!eventName) return alert("Please enter an event name.");
+
+      const attendanceMap = {};
+      document.querySelectorAll('#modalScoutList input').forEach(cb => {
+        attendanceMap[cb.dataset.name] = cb.checked;
+      });
+
+      modal.classList.add('hidden');
+      showView('loadingView');
+
+      await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'createEvent',
+          eventName: eventName,
+          attendanceMap: attendanceMap
+        })
+      });
+
+      // Reload
+      loadSheetData(state.currentUser.userId, state.currentUser.photoUrl);
+    };
+  </script>
+</body>
+</html>
