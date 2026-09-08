@@ -3,10 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Scout Attendance Tracker</title>
+  <title>Troop 1559 Attendance Portal</title>
+  <link rel="icon" href="https://www.scouting.org/wp-content/uploads/2024/10/fleur-de-lis-2024-logo-4-c-bc-1@3x.png" />
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <style>
+      #appView:not(.hidden) { display: flex; }
+    </style>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
@@ -23,105 +27,33 @@
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz6dbc1PAfjc4P1C6kMfCSOgDtDRwE59tzLdIk6s_40mmCusgQmcGcq9C7jMTnGG2IETg/exec";
   </script>
 
-  <div id="app" class="p-4 md:p-8 max-w-7xl mx-auto">
-    <!-- Loading Screen -->
-    <div id="loadingView" class="flex flex-col items-center justify-center min-h-[60vh]">
-      <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-      <p class="mt-4 text-slate-400">Loading Attendance System...</p>
-    </div>
+  <div id="loadingView" class="min-h-screen flex items-center justify-center"><div class="text-center"><img id="loadingLogo" class="w-16 h-16 object-contain mx-auto mb-4 animate-pulse"><p class="text-slate-400">Loading attendance...</p></div></div>
+  <div id="loginView" class="hidden min-h-screen flex items-center justify-center p-6"><div class="w-full max-w-md rounded-3xl border border-slate-700 bg-slate-800 p-9 text-center shadow-2xl"><img id="loginLogo" class="w-28 h-28 object-contain mx-auto mb-5"><p class="text-xs uppercase tracking-[.28em] text-emerald-300">Troop 1559</p><h1 class="mt-2 text-3xl font-bold">Attendance Portal</h1><p class="mt-3 mb-8 text-sm text-slate-400">Powered by TGG</p><button id="googleLoginBtn" class="w-full rounded-xl bg-emerald-500 py-3 font-bold text-slate-950 transition hover:bg-emerald-400">Sign in with Google</button><p id="loginError" class="mt-4 hidden text-sm text-rose-400"></p></div></div>
+  <div id="appView" class="hidden min-h-screen lg:flex"><aside class="flex w-full shrink-0 flex-col border-r border-slate-800 bg-slate-950 p-5 lg:w-72"><div class="flex items-center gap-3 border-b border-slate-800 pb-6"><img id="sideLogo" class="h-10 w-10 object-contain"><span class="font-bold leading-tight">Troop 1559<br><span class="text-sm font-normal text-emerald-300">Attendance Portal</span></span></div><nav class="mt-8 space-y-2"><button data-page="home" class="nav-btn nav-active flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold">⌂ <span>Home</span></button><button data-page="search" class="nav-btn flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold text-slate-400">⌕ <span>Search</span></button><button data-page="manage" id="manageNav" class="nav-btn flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold text-slate-400">＋ <span>Add / Remove Scouts</span></button></nav><div class="mt-auto border-t border-slate-800 pt-5"><div class="flex items-center gap-3"><img id="sideAvatar" class="h-10 w-10 rounded-full object-cover ring-2 ring-emerald-400/50"><div class="min-w-0"><p id="sideName" class="truncate text-sm font-bold"></p><p id="sideRole" class="text-xs text-slate-400"></p></div></div><button id="logoutBtn" class="mt-5 w-full rounded-xl border border-slate-700 py-2 text-sm text-slate-300 transition hover:border-rose-400 hover:text-rose-300">Sign out</button></div></aside><main class="min-w-0 flex-1 overflow-y-auto p-5 md:p-10"><div class="mx-auto max-w-6xl"><div id="pageContent"></div></div></main></div>
 
-    <!-- Login View -->
-    <div id="loginView" class="hidden flex flex-col items-center justify-center min-h-[70vh]">
-      <div class="bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-2xl max-w-md w-full text-center">
-        <h1 class="text-2xl font-bold mb-2">Scout Attendance</h1>
-        <p class="text-slate-400 mb-6 text-sm">Sign in to access your team's records</p>
-        
-        <button id="googleLoginBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 px-4 rounded-xl transition shadow-lg flex items-center justify-center gap-2">
-          <span>Sign In with Google</span>
-        </button>
-        <p id="loginError" class="text-red-400 text-sm mt-4 hidden"></p>
-      </div>
-    </div>
-
-    <!-- Main Dashboard -->
-    <div id="dashboardView" class="hidden space-y-6">
-      <!-- Header Bar -->
-      <header class="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex flex-wrap items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <img id="userAvatar" class="w-10 h-10 rounded-full object-cover border-2 border-blue-500" src="" alt="Profile">
-          <div>
-            <h2 id="userName" class="font-bold text-slate-100">---</h2>
-            <span id="roleBadge" class="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-300">Viewer</span>
-          </div>
-        </div>
-        
-        <div class="flex items-center gap-3">
-          <button id="newEventBtn" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-4 py-2 rounded-xl transition">
-            + New Event
-          </button>
-          <button id="logoutBtn" class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm px-4 py-2 rounded-xl transition">
-            Sign Out
-          </button>
-        </div>
-      </header>
-
-      <!-- Attendance Table -->
-      <main class="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-xl">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse">
-            <thead>
-              <tr id="tableHeader" class="bg-slate-900/60 border-b border-slate-700 text-slate-300 text-sm">
-                <th class="p-4 sticky left-0 bg-slate-900 z-10 w-64">Member</th>
-                <!-- Events populated dynamically -->
-              </tr>
-            </thead>
-            <tbody id="tableBody" class="divide-y divide-slate-700/50 text-sm">
-              <!-- Rows populated dynamically -->
-            </tbody>
-          </table>
-        </div>
-      </main>
-    </div>
-  </div>
-
-  <!-- New Event Modal -->
-  <div id="eventModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-lg w-full p-6 space-y-4">
-      <h3 class="text-xl font-bold">Create New Event / Meeting</h3>
-      <div>
-        <label class="block text-xs font-semibold text-slate-400 mb-1">EVENT TITLE</label>
-        <input id="eventNameInput" type="text" placeholder="e.g. Weekly Meeting 09/08" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500" />
-      </div>
-
-      <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
-        <label class="block text-xs font-semibold text-slate-400">MARK ATTENDANCE</label>
-        <div id="modalScoutList" class="space-y-2"></div>
-      </div>
-
-      <div class="flex justify-end gap-3 pt-2">
-        <button id="cancelModalBtn" class="px-4 py-2 rounded-xl text-slate-400 hover:text-white">Cancel</button>
-        <button id="saveEventBtn" class="bg-blue-600 hover:bg-blue-500 px-5 py-2 rounded-xl font-semibold">Save Event</button>
-      </div>
-    </div>
-  </div>
+  <div id="eventModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 p-5"><div class="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-slate-700 bg-slate-800 p-6"><div class="flex items-start justify-between"><div><p class="text-xs uppercase tracking-widest text-emerald-300">New event</p><h2 class="mt-1 text-2xl font-bold">Create an attendance event</h2></div><button id="closeModal" class="text-2xl text-slate-500 hover:text-white">×</button></div><div class="mt-6 grid gap-4 sm:grid-cols-2"><label class="text-sm text-slate-300 sm:col-span-2">Event title<input id="eventNameInput" class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white" placeholder="Weekly meeting"></label><label class="text-sm text-slate-300">Date<input id="eventDateInput" type="date" class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white"></label></div><div class="mt-5"><div class="flex items-center justify-between"><label class="text-sm font-semibold">Scouts added to this event</label><button id="selectAllBtn" class="text-xs text-emerald-300">Select all</button></div><div id="modalScoutList" class="mt-2 space-y-2"></div></div><div class="mt-6 flex justify-end gap-3"><button id="cancelModalBtn" class="rounded-xl px-4 py-2 text-slate-400">Cancel</button><button id="saveEventBtn" class="rounded-xl bg-emerald-500 px-5 py-2 font-bold text-slate-950">Create event</button></div></div></div>
 
   <!-- APPLICATION LOGIC -->
   <script>
     firebase.initializeApp(FIREBASE_CONFIG);
     const auth = firebase.auth();
 
-    let state = {
-      currentUser: null,
-      events: [],
-      members: []
-    };
+    const LOGO = 'https://www.scouting.org/wp-content/uploads/2024/10/fleur-de-lis-2024-logo-4-c-bc-1@3x.png';
+    ['loadingLogo','loginLogo','sideLogo'].forEach(id => document.getElementById(id).src = LOGO);
+    const state = { currentUser: null, events: [], members: [], page: 'home', query: '', searchType: 'events', sort: 'desc' };
+    const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
+    const roleOf = user => String(user?.role || user?.accessLevel || (user?.isEditor ? 'Editor' : 'Scout')).toLowerCase();
+    const isEditor = () => ['editor', 'admin', 'administrator'].includes(roleOf(state.currentUser));
+    const isAdmin = () => ['admin', 'administrator'].includes(roleOf(state.currentUser));
+    const avatar = (url, name) => url || `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Scout')}&background=173452&color=fff`;
+    const eventLabel = (event, index) => typeof event === 'string' ? event : (event.title || event.name || event.label || `Event ${index + 1}`);
+    const eventDate = event => typeof event === 'object' && event.date ? event.date : '';
+    const formatDate = date => { if (!date) return 'No date'; const value = new Date(date); return Number.isNaN(value.getTime()) ? date : value.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }); };
+    const recordFor = (member, index) => String(member?.records?.[index] ?? '').toUpperCase();
+    const percentage = member => { const records = member?.records || []; const marked = records.filter(value => ['Y','N'].includes(String(value).toUpperCase())); return marked.length ? Math.round(records.filter(value => String(value).toUpperCase() === 'Y').length / marked.length * 100) : 0; };
 
     // UI View Controllers
-    function showView(viewId) {
-      ['loadingView', 'loginView', 'dashboardView'].forEach(id => {
-        document.getElementById(id).classList.toggle('hidden', id !== viewId);
-      });
-    }
+    function showView(viewId) { ['loadingView', 'loginView', 'appView'].forEach(id => document.getElementById(id).classList.toggle('hidden', id !== viewId)); }
 
     // Auth Change Listener
     auth.onAuthStateChanged(async (user) => {
@@ -157,150 +89,46 @@
           return;
         }
 
-        state.currentUser = data.user;
-        state.events = data.events;
-        state.members = data.members;
+        state.currentUser = data.user || {};
+        state.currentUser.userId = state.currentUser.userId || userId;
+        state.events = data.events || [];
+        state.members = data.members || [];
 
         // Fallback profile photo logic
         if (!state.currentUser.photoUrl && authPhotoUrl) {
           state.currentUser.photoUrl = authPhotoUrl;
         }
 
-        renderDashboard();
-        showView('dashboardView');
+        document.getElementById('sideName').textContent = state.currentUser.fullName || 'User';
+        document.getElementById('sideRole').textContent = roleOf(state.currentUser).replace(/^./, value => value.toUpperCase());
+        document.getElementById('sideAvatar').src = avatar(state.currentUser.photoUrl, state.currentUser.fullName);
+        document.getElementById('manageNav').classList.toggle('hidden', !isEditor());
+        render();
+        showView('appView');
       } catch (e) {
         alert("Failed to connect to Google Sheets server.");
         console.error(e);
       }
     }
 
-    // Render Grid UI
-    function renderDashboard() {
-      // User Profile Header
-      document.getElementById('userName').innerText = state.currentUser.fullName || "User";
-      document.getElementById('userAvatar').src = state.currentUser.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(state.currentUser.fullName)}`;
-      
-      const roleBadge = document.getElementById('roleBadge');
-      const newEventBtn = document.getElementById('newEventBtn');
+    function render() { document.querySelectorAll('.nav-btn').forEach(button => button.classList.toggle('nav-active', button.dataset.page === state.page)); if (state.page === 'home') renderHome(); if (state.page === 'search') renderSearch(); if (state.page === 'manage') renderManage(); }
+    document.querySelectorAll('.nav-btn').forEach(button => button.onclick = () => { state.page = button.dataset.page; render(); });
+    const heading = (title, subtitle, action = '') => `<div class="flex flex-wrap items-end justify-between gap-4"><div><p class="text-xs uppercase tracking-[.25em] text-emerald-300">Troop 1559</p><h1 class="mt-2 text-3xl font-bold">${title}</h1><p class="mt-2 text-sm text-slate-400">${subtitle}</p></div>${action}</div>`;
+    function renderHome() { if (!isEditor()) return renderScoutHome(); const cards = state.events.map((event,index) => ({event,index})).sort((a,b) => new Date(eventDate(b.event)).getTime() - new Date(eventDate(a.event)).getTime()); document.getElementById('pageContent').innerHTML = heading('Events','Recent troop activity at a glance.','<button id="newEventBtn" class="rounded-xl bg-emerald-500 px-4 py-3 font-bold text-slate-950">＋ New event</button>') + `<div class="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">${cards.map(({event,index}) => `<button data-event-index="${index}" class="w-full rounded-2xl border border-slate-800 bg-slate-800 p-5 text-left transition hover:-translate-y-1 hover:border-emerald-400/60"><div class="flex items-start justify-between"><div><h2 class="font-bold">${esc(eventLabel(event,index))}</h2><p class="mt-1 text-xs text-slate-400">${esc(formatDate(eventDate(event)))}</p></div><span class="text-emerald-300">→</span></div><div class="mt-6 flex flex-wrap gap-2">${state.members.map(member => { const status=recordFor(member,index); return `<img title="${esc(member.name)}" src="${avatar(member.photoUrl,member.name)}" class="h-9 w-9 rounded-full object-cover ${status==='Y'?'ring-2 ring-emerald-400':status==='N'?'ring-2 ring-rose-400':'ring-2 ring-slate-600 opacity-50'}">`; }).join('')}</div></button>`).join('')}</div>`; document.getElementById('newEventBtn').onclick = openEventModal; }
+    function renderScoutHome() { const me = state.members.find(member => member.uid === state.currentUser.userId || member.userId === state.currentUser.userId || member.name === state.currentUser.fullName); document.getElementById('pageContent').innerHTML = heading(`Welcome, ${esc((state.currentUser.fullName || 'Scout').split(' ')[0])}`,'Your attendance record across troop events.') + `<div class="mt-8 grid gap-5 md:grid-cols-[220px_1fr]"><div class="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 p-6"><p class="text-sm text-emerald-200">Overall attendance</p><p class="mt-3 text-5xl font-bold">${percentage(me)}<span class="text-2xl">%</span></p></div><div class="space-y-3">${state.events.map((event,index) => { const status=recordFor(me,index); return `<div class="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-800 p-4"><div><p class="font-semibold">${esc(eventLabel(event,index))}</p><p class="mt-1 text-xs text-slate-400">${esc(formatDate(eventDate(event)))}</p></div><span class="rounded-full px-3 py-1 text-xs font-bold ${status==='Y'?'bg-emerald-400/15 text-emerald-300':status==='N'?'bg-rose-400/15 text-rose-300':'bg-slate-700 text-slate-400'}">${status==='Y'?'Present':status==='N'?'Absent':'Not listed'}</span></div>`; }).join('')}</div></div><div class="mt-8 rounded-2xl border border-slate-800 bg-slate-800 p-6"><h2 class="font-bold">Profile picture</h2><p class="mt-1 text-sm text-slate-400">Paste a public image URL to update your roster profile.</p><div class="mt-4 flex flex-wrap gap-3"><input id="photoUrlInput" value="${esc(state.currentUser.photoUrl || '')}" placeholder="https://..." class="min-w-[220px] flex-1 rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm"><button id="savePhotoBtn" class="rounded-xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-900">Save picture</button></div></div>`; document.getElementById('savePhotoBtn').onclick = savePhoto; }
+    function renderSearch() { const term=state.query.toLowerCase(); let items = state.searchType==='events' ? state.events.map((event,index)=>({title:eventLabel(event,index),date:eventDate(event)})).filter(item=>item.title.toLowerCase().includes(term)) : state.members.filter(member=>member.name.toLowerCase().includes(term)).map(member=>({title:member.name,member})); if(state.searchType==='events') items.sort((a,b)=>(new Date(a.date)-new Date(b.date))*(state.sort==='asc'?1:-1)); document.getElementById('pageContent').innerHTML=heading('Search','Find an event or scout in the attendance roster.')+`<div class="mt-8 flex flex-wrap gap-3"><input id="searchInput" value="${esc(state.query)}" placeholder="Search..." class="min-w-[220px] flex-1 rounded-xl border border-slate-700 bg-slate-800 p-3"><select id="searchType" class="rounded-xl border border-slate-700 bg-slate-800 p-3"><option value="events" ${state.searchType==='events'?'selected':''}>Events</option><option value="scouts" ${state.searchType==='scouts'?'selected':''}>Scouts</option></select><select id="sortSelect" class="rounded-xl border border-slate-700 bg-slate-800 p-3"><option value="desc" ${state.sort==='desc'?'selected':''}>Newest first</option><option value="asc" ${state.sort==='asc'?'selected':''}>Oldest first</option></select></div><div class="mt-6 space-y-3">${items.map(item=>`<div class="rounded-2xl border border-slate-800 bg-slate-800 p-4"><p class="font-semibold">${esc(item.title)}</p><p class="mt-1 text-xs text-slate-400">${item.date?esc(formatDate(item.date)):percentage(item.member)+'% overall attendance'}</p></div>`).join('')||'<p class="py-10 text-center text-slate-500">No matches found.</p>'}</div>`; document.getElementById('searchInput').oninput=e=>{state.query=e.target.value;renderSearch();}; document.getElementById('searchType').onchange=e=>{state.searchType=e.target.value;renderSearch();}; document.getElementById('sortSelect').onchange=e=>{state.sort=e.target.value;renderSearch();}; }
+    function renderManage() { if(!isEditor()) return; document.getElementById('pageContent').innerHTML=heading('Roster','Manage the scouts and access levels in the attendance list.')+`<div class="mt-8 grid gap-6 xl:grid-cols-2"><section class="rounded-2xl border border-slate-800 bg-slate-800 p-6"><h2 class="font-bold">Scouts</h2><div class="mt-4 flex gap-2"><input id="newScoutName" class="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950 p-3" placeholder="First and last name"><button id="addScoutBtn" class="rounded-xl bg-emerald-500 px-4 font-bold text-slate-950">Add</button></div><div class="mt-5 space-y-2">${state.members.map(member=>`<div class="flex items-center justify-between rounded-xl bg-slate-950/70 p-3"><span>${esc(member.name)}</span><button data-remove="${member.rowIndex}" class="text-xs text-rose-300">Remove</button></div>`).join('')}</div></section>${isAdmin()?`<section class="rounded-2xl border border-slate-800 bg-slate-800 p-6"><h2 class="font-bold">Access levels</h2><p class="mt-1 text-sm text-slate-400">Use column E values: Scout, Editor, or Admin.</p><div class="mt-4 grid gap-3"><input id="accessName" class="rounded-xl border border-slate-700 bg-slate-950 p-3" placeholder="First and last name"><input id="accessUid" class="rounded-xl border border-slate-700 bg-slate-950 p-3" placeholder="Google UID"><select id="accessRole" class="rounded-xl border border-slate-700 bg-slate-950 p-3"><option>Scout</option><option>Editor</option><option>Admin</option></select><button id="saveAccessBtn" class="rounded-xl bg-slate-100 py-3 font-bold text-slate-900">Add or update access</button></div></section>`:''}</div>`; document.getElementById('addScoutBtn').onclick=addScout; document.querySelectorAll('[data-remove]').forEach(button=>button.onclick=()=>removeScout(button.dataset.remove)); if(isAdmin()) document.getElementById('saveAccessBtn').onclick=saveAccess; }
 
-      if (state.currentUser.isEditor) {
-        roleBadge.innerText = "Editor";
-        roleBadge.className = "text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-semibold border border-blue-500/30";
-        newEventBtn.classList.remove('hidden');
-      } else {
-        roleBadge.innerText = "Read Only";
-        roleBadge.className = "text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400";
-        newEventBtn.classList.add('hidden');
-      }
-
-      // Headers
-      const headerTr = document.getElementById('tableHeader');
-      headerTr.innerHTML = `<th class="p-4 sticky left-0 bg-slate-900 z-10 w-64 border-r border-slate-700">Member</th>`;
-      state.events.forEach(evt => {
-        headerTr.innerHTML += `<th class="p-4 text-center min-w-[120px] font-semibold border-r border-slate-700/50">${evt}</th>`;
-      });
-
-      // Rows
-      const body = document.getElementById('tableBody');
-      body.innerHTML = "";
-
-      state.members.forEach((member) => {
-        const avatar = member.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}`;
-        let rowHtml = `
-          <tr class="hover:bg-slate-700/30 transition">
-            <td class="p-3 sticky left-0 bg-slate-800 border-r border-slate-700 flex items-center gap-3 font-medium">
-              <img src="${avatar}" class="w-8 h-8 rounded-full object-cover bg-slate-700" alt="">
-              <span>${member.name}</span>
-            </td>
-        `;
-
-        member.records.forEach((status, colIndex) => {
-          const isPresent = String(status).toUpperCase() === 'Y';
-          const canEdit = state.currentUser.isEditor;
-
-          rowHtml += `
-            <td class="p-2 text-center border-r border-slate-700/50">
-              <button 
-                ${canEdit ? `onclick="toggleAttendance(${member.rowIndex}, ${colIndex}, '${status}')"` : 'disabled'}
-                class="px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                  isPresent 
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30' 
-                    : 'bg-rose-500/20 text-rose-400 border border-rose-500/40 hover:bg-rose-500/30'
-                } ${!canEdit ? 'cursor-default opacity-80' : ''}">
-                ${isPresent ? 'YES' : 'NO'}
-              </button>
-            </td>
-          `;
-        });
-
-        rowHtml += `</tr>`;
-        body.innerHTML += rowHtml;
-      });
-    }
-
-    // Single Cell Toggle
-    async function toggleAttendance(rowIndex, colIndex, currentValue) {
-      const newValue = currentValue === 'Y' ? 'N' : 'Y';
-      
-      // Optimistic Local Update
-      const member = state.members.find(m => m.rowIndex === rowIndex);
-      if (member) member.records[colIndex] = newValue;
-      renderDashboard();
-
-      await fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'updateCell',
-          rowIndex: rowIndex,
-          colIndex: colIndex,
-          value: newValue
-        })
-      });
-    }
-
-    // Modal Control & Event Creation
-    const modal = document.getElementById('eventModal');
-    document.getElementById('newEventBtn').onclick = () => {
-      const list = document.getElementById('modalScoutList');
-      list.innerHTML = "";
-      state.members.forEach(m => {
-        list.innerHTML += `
-          <label class="flex items-center justify-between p-2.5 bg-slate-900 rounded-xl border border-slate-700 cursor-pointer">
-            <span class="text-sm font-medium">${m.name}</span>
-            <input type="checkbox" data-name="${m.name}" checked class="w-5 h-5 accent-blue-500 rounded">
-          </label>
-        `;
-      });
-      document.getElementById('eventNameInput').value = "";
-      modal.classList.remove('hidden');
-    };
-
-    document.getElementById('cancelModalBtn').onclick = () => modal.classList.add('hidden');
-
-    document.getElementById('saveEventBtn').onclick = async () => {
-      const eventName = document.getElementById('eventNameInput').value.trim();
-      if (!eventName) return alert("Please enter an event name.");
-
-      const attendanceMap = {};
-      document.querySelectorAll('#modalScoutList input').forEach(cb => {
-        attendanceMap[cb.dataset.name] = cb.checked;
-      });
-
-      modal.classList.add('hidden');
-      showView('loadingView');
-
-      await fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'createEvent',
-          eventName: eventName,
-          attendanceMap: attendanceMap
-        })
-      });
-
-      // Reload
-      loadSheetData(state.currentUser.userId, state.currentUser.photoUrl);
-    };
+    async function request(payload) { return (await fetch(APPS_SCRIPT_URL, { method:'POST', body:JSON.stringify(payload) })).json().catch(() => ({})); }
+    async function savePhoto() { const photoUrl=document.getElementById('photoUrlInput').value.trim(); if(!photoUrl) return; await request({action:'updateProfile',userId:state.currentUser.userId,photoUrl}); state.currentUser.photoUrl=photoUrl; document.getElementById('sideAvatar').src=avatar(photoUrl,state.currentUser.fullName); alert('Profile picture updated.'); }
+    async function addScout() { const name=document.getElementById('newScoutName').value.trim(); if(!name) return; await request({action:'addScout',name,userId:state.currentUser.userId}); await loadSheetData(state.currentUser.userId,state.currentUser.photoUrl); }
+    async function removeScout(rowIndex) { if(!confirm('Remove this scout from the main attendance list?')) return; await request({action:'removeScout',rowIndex,userId:state.currentUser.userId}); await loadSheetData(state.currentUser.userId,state.currentUser.photoUrl); }
+    async function saveAccess() { const name=document.getElementById('accessName').value.trim(), uid=document.getElementById('accessUid').value.trim(), role=document.getElementById('accessRole').value; if(!name||!uid) return alert('Name and UID are required.'); await request({action:'updateAccess',name,uid,role,userId:state.currentUser.userId}); alert('Access updated.'); }
+    function openEventModal() { const modal=document.getElementById('eventModal'); document.getElementById('modalScoutList').innerHTML=state.members.map(member=>`<label class="flex cursor-pointer items-center justify-between rounded-xl border border-slate-800 bg-slate-950/70 p-3"><span>${esc(member.name)}</span><input type="checkbox" data-name="${esc(member.name)}" class="h-5 w-5 accent-emerald-400"></label>`).join(''); document.getElementById('eventNameInput').value=''; document.getElementById('eventDateInput').value=''; modal.classList.replace('hidden','flex'); }
+    document.getElementById('closeModal').onclick=()=>document.getElementById('eventModal').classList.replace('flex','hidden'); document.getElementById('cancelModalBtn').onclick=document.getElementById('closeModal').onclick; document.getElementById('selectAllBtn').onclick=()=>document.querySelectorAll('#modalScoutList input').forEach(input=>input.checked=true);
+    document.getElementById('saveEventBtn').onclick=async()=>{ const eventName=document.getElementById('eventNameInput').value.trim(), date=document.getElementById('eventDateInput').value; if(!eventName||!date) return alert('Event title and date are required.'); const attendanceMap={}; document.querySelectorAll('#modalScoutList input').forEach(input=>attendanceMap[input.dataset.name]=input.checked); document.getElementById('eventModal').classList.replace('flex','hidden'); showView('loadingView'); await request({action:'createEvent',eventName,date,attendanceMap,userId:state.currentUser.userId}); await loadSheetData(state.currentUser.userId,state.currentUser.photoUrl); };
+    document.addEventListener('click', event => { const card=event.target.closest('[data-event-index]'); if(card) openAttendance(Number(card.dataset.eventIndex)); });
+    function openAttendance(index) { const event=state.events[index]; document.getElementById('pageContent').innerHTML=heading(eventLabel(event,index),`${formatDate(eventDate(event))} · Select who is present.`)+`<div class="mt-8 rounded-2xl border border-slate-800 bg-slate-800 p-5"><div class="space-y-2">${state.members.map(member=>{const status=recordFor(member,index);return `<div class="flex items-center justify-between rounded-xl bg-slate-950/60 p-3"><div class="flex items-center gap-3"><img src="${avatar(member.photoUrl,member.name)}" class="h-9 w-9 rounded-full"><span>${esc(member.name)}</span></div><button data-attendance-row="${member.rowIndex}" data-attendance-col="${index}" data-attendance-value="${status}" class="rounded-lg px-4 py-2 text-xs font-bold ${status==='Y'?'bg-emerald-400/15 text-emerald-300':'bg-rose-400/15 text-rose-300'}">${status==='Y'?'Present':'Absent'}</button></div>`;}).join('')}</div></div>`; document.querySelectorAll('[data-attendance-row]').forEach(button=>button.onclick=async()=>{const value=button.dataset.attendanceValue==='Y'?'N':'Y'; await request({action:'updateCell',rowIndex:Number(button.dataset.attendanceRow),colIndex:Number(button.dataset.attendanceCol),value}); const member=state.members.find(item=>String(item.rowIndex)===button.dataset.attendanceRow); if(member) member.records[index]=value; openAttendance(index);}); }
   </script>
 </body>
 </html>
